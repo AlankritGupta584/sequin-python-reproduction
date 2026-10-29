@@ -17,17 +17,29 @@ def _matrix(text, name):
     return np.array(rows, dtype=float)
 
 
-def load_case(filename):
+def load_case(filename, perturb=0.0, seed=None):
+    """Load a MATPOWER case.
+
+    perturb is a fractional uniform load perturbation, e.g. 0.05 means
+    each positive Pd is multiplied by U(0.95, 1.05). This mirrors the
+    paper/released experiment setup when requested; default is deterministic.
+    """
     text = open(filename, encoding='utf-8').read()
     base = float(re.search(r"mpc\.baseMVA\s*=\s*([0-9.eE+\-]+)", text).group(1))
-    return {
-        'name': filename.split('/')[-1].replace('.m', ''),
+    case = {
+        'name': str(filename).replace('\\', '/').split('/')[-1].replace('.m', ''),
         'base': base,
         'bus': _matrix(text, 'bus'),
         'gen': _matrix(text, 'gen'),
         'branch': _matrix(text, 'branch'),
         'gencost': _matrix(text, 'gencost'),
     }
+    if perturb > 0:
+        rng = np.random.default_rng(seed)
+        pd = case['bus'][:, 2]
+        mask = pd > 0
+        pd[mask] *= rng.uniform(1.0 - perturb, 1.0 + perturb, size=mask.sum())
+    return case
 
 
 def total_load(case):
@@ -116,7 +128,7 @@ def initial_state(case):
                 row[f0 + j] -= 1
             if int(br[1]) == b:
                 row[f0 + j] += 1
-        demand = max(bus[bi, 2], 0) + max(bus[bi, 4], 0)
+        demand = float(bus[bi, 2]) + float(bus[bi, 4])
         Aeq.append(row)
         beq.append(demand)
 
@@ -147,7 +159,12 @@ def initial_state(case):
 
 
 def defend(case, failed, prev, ramp=0.1, simple_ramp=False):
-    """Maximise served load after a set of line failures."""
+    """Maximise served load after a set of line failures.
+
+    The normal mode uses one binary variable per generator so a unit can either
+    shut down or stay inside its ramp window. simple_ramp=True intentionally
+    removes that binary recourse for an ablation experiment.
+    """
     bus, gen, base = case['bus'], case['gen'], case['base']
     lines = active_lines(case, failed)
     ids = [int(x) for x in bus[:, 0]]
@@ -222,7 +239,10 @@ def defend(case, failed, prev, ramp=0.1, simple_ramp=False):
                 row[f0 + j] -= 1
             if int(br[1]) == b:
                 row[f0 + j] += 1
-        rows.append(row); lows.append(0); highs.append(0)
+        fixed_negative_load = min(float(bus[bi, 2]), 0.0)
+        fixed_shunt = min(float(bus[bi, 4]), 0.0)
+        rhs = fixed_negative_load + fixed_shunt
+        rows.append(row); lows.append(rhs); highs.append(rhs)
 
     for comp in components(case, failed):
         row = np.zeros(n)
