@@ -1,84 +1,196 @@
-# SEQUIN Python Reproduction
+# SEQUIN Python Implementation
 
-Independent Python/SciPy reproduction and analysis of selected mechanisms from:
+A standalone Python/SciPy implementation of the sequential N-k attack framework studied in:
 
 > Andrew Chio, Russell Bent, Kaarthik Sundar, and Nalini Venkatasubramanian, **“SEQUIN: A Network Science and Physics-based Approach to Identify Sequential N-k Attacks in Electric Power Grids,”** ACM/IEEE ICCPS 2025.
 
-Original authors' implementation: https://github.com/andrewgchio/SEQUIN
+This repository builds the core model and search pipeline from scratch in Python, evaluates it on the six PGLib cases used in the paper, and compares the resulting behavior with released reference outputs.
 
-This repository is intentionally **not** a line-by-line rewrite of the Julia/PowerModels/JuMP/Gurobi artifact. It independently implements the core DC defender and sequential search mechanisms, then compares them against the authors' released experiment outputs. Good matches, partial matches, and failures are all kept visible.
+## Features
 
-## Implemented model
+### Grid and defender model
 
-- MATPOWER parser for six PGLib cases used in the paper.
-- DC bus balance and branch-flow equations.
-- Branch thermal limits and phase-angle limits.
-- Line outages and connected-island reference angles.
-- Load shedding with already-shed load unavailable in later rounds.
-- Generator ramp bounds.
-- Binary generator on/off recourse for the fuller defender model.
-- Optional deliberately simplified continuous-ramp model for ablation.
-- Optional deterministic ±5% load perturbation with explicit random seed.
-- Handling of negative MATPOWER loads as fixed net injections (needed for Case 162/240 fidelity).
+- MATPOWER/PGLib case parser.
+- DC bus power balance.
+- DC branch-flow equations.
+- Branch thermal limits.
+- Phase-angle limits.
+- Line-outage handling.
+- Connected-island reference angles.
+- Load shedding.
+- Sequential state propagation.
+- Generator ramp constraints.
+- Binary generator on/off recourse.
+- Negative MATPOWER loads handled as fixed net injections.
+- Optional ±5% load perturbation with explicit random seed.
 
-## Search methods
+### Attack and search methods
 
-- Exact simultaneous search for small cases.
+- Exact simultaneous N-k search for small cases.
 - Exact ordered sequential enumeration for small cases.
 - Greedy-FLOW.
-- Greedy-IMPACT / immediate load shed.
-- Greedy criticality variants, including an author-style state-update version.
-- SEQUIN-style guided search matching the active released `ours.jl` path: top-10 current power-flow shortlist followed by cut-impact selection.
-- PERM reproduction by enumerating orders of a fixed author STD line set.
-- Replay of an author's exact attack sequence to isolate physical-model fidelity from search differences.
+- Greedy-IMPACT.
+- Generator-criticality baseline.
+- SEQUIN-style guided search using current-flow shortlisting followed by cut-impact evaluation.
+- Permutation search over a fixed line set.
+- Replay of reference attack sequences for model-fidelity analysis.
 
-## Two levels of experiments
+### Network metrics
 
-### Quick/core reproduction
+- Power flow.
+- Generator criticality.
+- Branch thermal margin.
+- Load density.
+- Transmission-width heuristic.
+- Load-density / transmission-width score.
 
-```bash
-python run_reproduction.py
-python check_results.py
-```
+## Benchmark cases
 
-### Expanded evaluation suite
+The implementation includes all six networks used in the paper:
 
-```bash
-python run_extended_reproduction.py
-python check_extended_results.py
-python make_extended_plots.py
-```
+| Case | Buses | Branches |
+|---|---:|---:|
+| Case 14 | 14 | 20 |
+| Case 39 | 39 | 46 |
+| Case 60 | 60 | 88 |
+| Case 118 | 118 | 186 |
+| Case 162 | 162 | 284 |
+| Case 240 | 240 | 448 |
 
-The expanded suite covers all six paper networks, Greedy-FLOW `k=2..8`, same-author-sequence replay, selected Guided / Greedy-IMPACT searches, PERM, ramp sensitivity, defender-model ablation, ±5% load perturbation sensitivity, measured runtime/solver calls, and explicit divergence diagnosis.
-
-Large searches are deliberately selective. Full Greedy-IMPACT or exact enumeration on the largest grids would require thousands to tens of thousands of repeated MILP solves; those are recorded as computational limitations rather than silently presented as completed experiments.
-
-## Main verified findings
-
-- **Case 14, k=2:** exact simultaneous = `3.7500`, exact sequential = `4.3997`, guided = `4.3997`.
-- **Case 14 guided search:** exact match on tested `k=2,3,4,8`.
-- **Case 39 guided search:** tested `k=2,3,4,6` stay within about 1.1% of the released reference.
-- **Case 162 guided k=2:** within 5%.
-- **Case 240:** replaying the authors' exact SEQUIN sequence stays within about 2% at tested k values.
-- **Ramp replay:** same-sequence ramp tests are particularly close for Cases 39, 162, and 240.
-- **Simplified ramp ablation:** fails badly under tight ramping, showing binary generator recourse materially affects the result.
-- **Load perturbation:** independent ±5% draws can substantially change both the selected sequence and final load shed; the released experiment code does not preserve RNG state.
-
-See `results/divergence_diagnosis_fresh.csv` and `results/limitations_fresh.csv` for machine-readable mismatch analysis.
-
-## Install
+## Installation
 
 ```bash
 python -m venv .venv
 pip install -r requirements.txt
 ```
 
-The Python reproduction does **not** require a Gurobi license; SciPy's HiGHS backend is used.
+The implementation uses SciPy/HiGHS and does not require a Gurobi license.
 
-## Academic scope
+## Run
 
-A safe description is:
+Run the complete default test suite:
 
-> We independently implemented a compact DC line-outage and sequential-response model in Python/SciPy, reproduced the core small-case phenomenon exactly, reproduced selected guided-search results closely, broadened the evaluation to all six paper networks through search and same-sequence replay tests, and explicitly analyzed where differences arise from randomized inputs, search sensitivity, model simplification, and computational cost.
+```bash
+python run_tests.py
+python check_results.py
+python make_plots.py
+```
 
-It should not be described as a complete replacement for PowerModels/JuMP/Gurobi or as an exact reproduction of every randomized author run.
+For the most expensive large-grid guided searches:
+
+```bash
+python run_tests.py --full
+```
+
+## Test coverage
+
+The test suite includes:
+
+- six-network Greedy-FLOW sweep for `k = 2...8`;
+- selected independent Guided and Greedy-IMPACT runs;
+- exact simultaneous and sequential search on small cases;
+- permutation tests;
+- reference-sequence replay;
+- generator-ramp sensitivity;
+- full-vs-simplified defender ablation;
+- ±5% load-perturbation sensitivity;
+- runtime and defender-solve counts;
+- automatic diagnosis of search-vs-model divergence.
+
+## Results
+
+Some parts reproduce the released reference outputs very closely, while others diverge.
+
+Examples observed in the current implementation:
+
+- **Case 14, k=2**
+  - exact simultaneous: `3.7500`
+  - exact sequential: `4.3997`
+  - guided: `4.3997`
+
+- **Case 14 guided search**
+  - exact agreement for several tested values of `k`.
+
+- **Case 39 guided search**
+  - very close agreement for tested `k=2,3,4,6`, typically within about 1–2%.
+
+- **Case 162 guided, k=2**
+  - within roughly 5%.
+
+- **Case 240 same-sequence replay**
+  - close agreement for tested attack budgets, generally within a few percent.
+
+The implementation does **not fully reproduce every paper/reference result**. The main causes observed are:
+
+1. **Randomized load perturbation**  
+   The released experiments perturb loads by ±5%. The original random state is not stored, so different load realizations can change both the attack sequence and final load shed.
+
+2. **Search sensitivity**  
+   Small changes in the initial operating point can change the top-flow shortlist and therefore the path followed by Guided Exploration.
+
+3. **Model-detail differences**  
+   The Python model captures the core DC, ramp, generator on/off, line-limit, island, and load-shed constraints, but numerical details can still differ from PowerModels/JuMP/Gurobi.
+
+4. **Generator recourse**  
+   Removing binary generator on/off behavior causes large errors under tight ramp limits. This is visible in the defender-ablation tests.
+
+5. **Combinatorial cost**  
+   Exact enumeration and full Greedy-IMPACT become expensive on large networks because they require many repeated optimization solves.
+
+These discrepancies are retained as part of the analysis rather than tuned away.
+
+## Output files
+
+Running `run_tests.py` produces:
+
+```text
+results/results.csv
+results/divergence_diagnosis.csv
+results/status_summary.csv
+results/limitations.csv
+```
+
+Running `make_plots.py` produces:
+
+```text
+plots/01_author_sequence_replay_error.png
+plots/02_flow_k_sweep_all_cases.png
+plots/03_selected_search_errors.png
+plots/04_ramp_replay_error.png
+plots/05_full_vs_simple_ramp.png
+plots/06_search_cost_runtime.png
+plots/07_load_perturbation_sensitivity.png
+```
+
+## Repository structure
+
+```text
+.
+├── grid_model.py
+├── search_methods.py
+├── network_metrics.py
+├── reference_utils.py
+├── run_tests.py
+├── check_results.py
+├── make_plots.py
+├── requirements.txt
+├── data/
+│   ├── pglib_opf_case14_ieee__api.m
+│   ├── pglib_opf_case39_epri__api.m
+│   ├── pglib_opf_case60_c.m
+│   ├── pglib_opf_case118_ieee__api.m
+│   ├── pglib_opf_case162_ieee_dtc.m
+│   ├── pglib_opf_case240_pserc.m
+│   ├── author_exp1.csv
+│   └── author_exp2.csv
+├── docs/
+│   └── implementation_notes.md
+├── results/
+└── plots/
+```
+
+## Reference
+
+Original SEQUIN implementation:
+
+https://github.com/andrewgchio/SEQUIN
