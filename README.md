@@ -6,7 +6,7 @@ A compact, independent Python/SciPy reproduction of selected ideas from:
 
 Original authors' implementation: https://github.com/andrewgchio/SEQUIN
 
-This repository is intentionally small. It is **not** a line-by-line rewrite of the authors' Julia/PowerModels/JuMP/Gurobi code. The goal is to independently implement enough of the core sequential-attack idea to reproduce selected results and understand where a simplified model stops matching the full paper model.
+It is **not** a line-by-line rewrite of the authors' Julia/PowerModels/JuMP/Gurobi code. The goal is to independently implement enough of the core sequential-attack idea to reproduce selected results and verify the model.
 
 ## What is implemented
 
