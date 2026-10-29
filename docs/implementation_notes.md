@@ -1,8 +1,8 @@
-# What this simple implementation can honestly claim
+# What this simple implementation can claim
 
-## 1. What I implemented myself
+## 1. What is implemented
 
-I did not rewrite the whole Julia repository. I implemented the parts needed for a small independent check:
+We did not rewrite the whole Julia repository.We implemented the parts needed for a small independent check:
 
 - read MATPOWER bus / generator / branch data;
 - solve an intact DC OPF;
