@@ -95,14 +95,6 @@ plots/02_case39_reference_comparison.png
 plots/03_case39_partial_ramp_reproduction.png
 ```
 
-## Academic scope
-
-A safe description of this repository is:
-
-> We independently implemented a compact DC line-outage and sequential-response model in Python/SciPy. We reproduce the central small-case sequential-vs-simultaneous phenomenon, cross-check selected Case-39 search results against released author-reference values, and separately report a simplified ramping experiment where omitted defender details lead to a partial rather than exact reproduction.
-
-It should **not** be described as a complete reimplementation of every SEQUIN experiment or of the full PowerModels/JuMP defender formulation.
-
 ## Data provenance
 
 The PGLib/MATPOWER benchmark inputs and selected author-reference values are included only to support reproduction and comparison. Credit for the original SEQUIN paper, implementation, benchmark sources, and released experiment data belongs to the original authors and PGLib-OPF contributors. See the original SEQUIN repository above for the authors' project and licensing information.
