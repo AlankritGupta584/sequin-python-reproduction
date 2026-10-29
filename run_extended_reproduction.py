@@ -247,6 +247,20 @@ def write_outputs(rows):
     if len(merged):
         merged['diagnosis'] = merged.apply(diagnose, axis=1)
         merged.to_csv(RESULTS / 'divergence_diagnosis_fresh.csv', index=False)
+    df.groupby(['experiment','status']).size().unstack(fill_value=0).to_csv(
+        RESULTS / 'status_summary_fresh.csv')
+    pd.DataFrame([
+        ['case14 exact sequential k=3','NOT RUN BY DEFAULT',
+         '6,840 ordered sequences and >20k defender solves; k=2 exact enumeration is retained as ground truth.'],
+        ['case240 independent guided','FULL MODE ONLY',
+         'Top-10 guided search requires many large MILPs; same-sequence replay and Greedy-FLOW still evaluate Case 240 by default.'],
+        ['large-case Greedy-IMPACT','SELECTIVE',
+         'Every remaining line is solved each round, so 162/240 full sweeps are intentionally not forced.'],
+        ['exact author randomized loads','UNAVAILABLE',
+         'Released experiments use fresh ±5% random load perturbations without storing the RNG state.'],
+        ['PowerModels feature parity','PARTIAL',
+         'Core DC/ramp/on-off/island constraints are implemented, but this is not a complete PowerModels reimplementation.'],
+    ], columns=['test','status','reason']).to_csv(RESULTS / 'limitations_fresh.csv', index=False)
     return df
 
 
@@ -255,8 +269,8 @@ def main():
     ap.add_argument('--full', action='store_true',
                     help='Also run the most expensive large-grid guided searches.')
     args = ap.parse_args()
-    exp1 = load_exp1(DATA / 'author_exp1_best.csv')
-    exp2 = load_exp2(DATA / 'author_exp2_best.csv')
+    exp1 = load_exp1(DATA / 'author_exp1_runner.csv')
+    exp2 = load_exp2(DATA / 'author_exp2_runner.csv')
     rows = []
     replay_author_sequences(exp1, rows)
     run_flow_sweep(exp1, rows)
