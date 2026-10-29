@@ -45,8 +45,8 @@ python check_results.py
 
 ```bash
 python run_extended_reproduction.py
-python compile_extended_results.py
 python check_extended_results.py
+python make_extended_plots.py
 ```
 
 The expanded suite covers all six paper networks, Greedy-FLOW `k=2..8`, same-author-sequence replay, selected Guided / Greedy-IMPACT searches, PERM, ramp sensitivity, defender-model ablation, ±5% load perturbation sensitivity, measured runtime/solver calls, and explicit divergence diagnosis.
@@ -64,7 +64,7 @@ Large searches are deliberately selective. Full Greedy-IMPACT or exact enumerati
 - **Simplified ramp ablation:** fails badly under tight ramping, showing binary generator recourse materially affects the result.
 - **Load perturbation:** independent ±5% draws can substantially change both the selected sequence and final load shed; the released experiment code does not preserve RNG state.
 
-See `results/divergence_diagnosis.csv` and `results/limitations.csv` for machine-readable mismatch analysis.
+See `results/divergence_diagnosis_fresh.csv` and `results/limitations_fresh.csv` for machine-readable mismatch analysis.
 
 ## Install
 
